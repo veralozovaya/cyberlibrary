@@ -5,3 +5,9 @@ node_modules/
 __pycache__/
 .vscode/
 .venv/
+
+# Secrets & keys
+.env
+*.key
+id_rsa*
+id_ed25519*
