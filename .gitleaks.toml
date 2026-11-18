@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "cyberlibrary-ebooks-token"
+description = "Токен інтеграції Кібербібліотеки з сервісом електронних книжок"
+regex = '''lib_[0-9]{8}_[0-9A-Za-z]{20}'''
+keywords = ["lib_"]
+
+[allowlist]
+description = "Документація з прикладами"
+paths = ['''docs/examples/.*''']    
