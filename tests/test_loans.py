@@ -172,3 +172,19 @@ def test_service_reminder_boundary_days(make_loan, days_before_due, expected_sen
         )
     else:
         notifier.send.assert_not_called()
+
+# 5. Додаткове завдання: перевірка тексту через mock ──
+def test_reminder_message_contains_title_and_due_date_via_mock_args(make_loan):
+    """Перевірка змісту нагадування через інспекцію аргументів виклику mock."""
+    loan = make_loan(book_title="1984", reader_email="olena@cyberlibrary.ua")
+    clock = FakeClock(loan.due_date - timedelta(days=2))
+    notifier = Mock()
+    service = LoanService(clock=clock, queue_checker=StubQueue(), notifier=notifier)
+
+    service.send_due_reminder_if_needed(loan)
+
+    notifier.send.assert_called_once()
+    sent_email, sent_text = notifier.send.call_args.args
+    assert sent_email == "olena@cyberlibrary.ua"
+    assert "1984" in sent_text
+    assert str(loan.due_date) in sent_text
