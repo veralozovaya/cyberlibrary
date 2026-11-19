@@ -1,0 +1,39 @@
+.github
+    +-- CODEOWNERS
+    +-- dependabot.yml
+    +-- pull_request_template.md
+.venv
+docs
+    +-- examples
+        +-- api_quickstart.md
+        +-- config_sample.md
+    +-- architecture.md
+    +-- test-design.md
+src
+    +-- cyberlibrary
+        +-- config.py
+        +-- loans.py
+        +-- __init__.py
+tests
+    +-- conftest.py
+    +-- test_config.py
+    +-- test_loans.py
+.env
+.env.example
+.gitignore
+.gitleaks.toml
+.gitleaksignore
+.pre-commit-config.yaml
+LICENSE
+pyproject.toml
+README.md
+requirements-dev.txt
+SECURITY.md
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
