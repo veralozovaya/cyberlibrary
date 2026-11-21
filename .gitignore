@@ -7,7 +7,10 @@ __pycache__/
 .venv/
 
 # Secrets & keys
-.env
-*.key
 id_rsa*
 id_ed25519*
+
+# Virtual environments & testing
+.pytest_cache/
+.coverage
+htmlcov/
