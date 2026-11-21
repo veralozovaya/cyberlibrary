@@ -27,7 +27,7 @@ class StubQueue:
         return book_id in self._queued_books
 
 
-# 1. Тести створення видачі (create_loan)
+# ── 1. Тести створення видачі (create_loan) ───────────────────────
 @pytest.mark.parametrize(
     "book_format, expected_days",
     [
@@ -44,16 +44,35 @@ def test_create_loan_sets_standard_due_date(book_format, expected_days):
         reader_email="user@example.com",
         issued_on=issued,
     )
+    assert loan.book_id == "BK-1"
+    assert loan.book_title == "Нейромант"
+    assert loan.book_format == book_format
+    assert loan.reader_email == "user@example.com"
+    assert loan.issued_on == issued
     assert (loan.due_date - loan.issued_on).days == expected_days
     assert loan.renewals_count == 0
+    assert loan.has_debt is False
+
+
+def test_create_loan_preserves_explicit_debt_flag():
+    """Перевіряє передачу явного прапорця has_debt=True у конструктор Loan."""
+    loan = create_loan(
+        book_id="BK-2",
+        book_title="Гіперіон",
+        book_format="paper",
+        reader_email="debtor@example.com",
+        issued_on=date(2026, 11, 1),
+        has_debt=True,
+    )
+    assert loan.has_debt is True
 
 
 def test_create_loan_unknown_format_raises():
-    with pytest.raises(ValueError, match="Невідомий формат книжки"):
+    with pytest.raises(ValueError, match=r"^Невідомий формат книжки: audiobook$"):
         create_loan("BK-1", "Книга", "audiobook", "user@example.com", date(2026, 11, 1))
 
 
-# 2. Параметризовані тести меж та класів для renew_loan
+# ── 2. Параметризовані тести меж та класів для renew_loan ─────────
 @pytest.mark.parametrize(
     "book_format, renewals_count, days_from_due, expected_added_days",
     [
@@ -75,7 +94,7 @@ def test_renew_loan_success_cases(
     assert renewed.renewals_count == renewals_count + 1
 
 
-# 3. Негативні тести (таблиця рішень R2–R6 та недопустимі дані)
+# ── 3. Негативні тести (таблиця рішень R2–R6 та недопустимі дані) ──
 @pytest.mark.parametrize(
     "renewals_count",
     [
@@ -85,21 +104,23 @@ def test_renew_loan_success_cases(
 )
 def test_renew_loan_rejected_when_limit_reached(make_loan, renewals_count):
     loan = make_loan(renewals_count=renewals_count)
-    with pytest.raises(ValueError, match="ліміт продовжень"):
+    with pytest.raises(ValueError, match=r"^Вичерпано ліміт продовжень \(максимум 2 рази\)$"):
         renew_loan(loan, today=loan.issued_on, has_queue=False)
 
 
 def test_renew_loan_rejected_when_queue_exists(make_loan):
     """Правило R3: на книжку є черга."""
     loan = make_loan()
-    with pytest.raises(ValueError, match="є черга"):
+    with pytest.raises(ValueError, match=r"^Неможливо продовжити видачу: на книжку є черга$"):
         renew_loan(loan, today=loan.issued_on, has_queue=True)
 
 
 def test_renew_loan_rejected_when_reader_has_debt(make_loan):
     """Правило R4: читач має активну заборгованість."""
     loan = make_loan(has_debt=True)
-    with pytest.raises(ValueError, match="заборгованість"):
+    with pytest.raises(
+        ValueError, match=r"^Неможливо продовжити видачу: у читача є заборгованість$"
+    ):
         renew_loan(loan, today=loan.issued_on, has_queue=False)
 
 
@@ -107,15 +128,15 @@ def test_renew_loan_rejected_when_overdue_by_one_day(make_loan):
     """Правило R5, межа: прострочення на +1 день після due_date."""
     loan = make_loan()
     overdue_day = loan.due_date + timedelta(days=1)
-    with pytest.raises(ValueError, match="прострочену видачу"):
+    with pytest.raises(ValueError, match=r"^Неможливо продовжити прострочену видачу$"):
         renew_loan(loan, today=overdue_day, has_queue=False)
 
 
 @pytest.mark.parametrize(
     "book_format, renewals_count, expected_match",
     [
-        ("clay_tablet", 0, "Невідомий формат"),   # недопустимий формат книжки
-        ("ebook", -1, "не може бути від'ємною"),  # нижня недопустима межа лічильника
+        ("clay_tablet", 0, r"^Невідомий формат книжки: clay_tablet$"),
+        ("ebook", -1, r"^Кількість продовжень не може бути від'ємною$"),
     ],
 )
 def test_renew_loan_invalid_state_raises(make_loan, book_format, renewals_count, expected_match):
@@ -143,7 +164,7 @@ def test_service_blocks_renewal_when_book_is_in_stub_queue(make_loan):
     queue = StubQueue(queued_books={"BK-42"})
     service = LoanService(clock=clock, queue_checker=queue, notifier=Mock())
 
-    with pytest.raises(ValueError, match="є черга"):
+    with pytest.raises(ValueError, match=r"^Неможливо продовжити видачу: на книжку є черга$"):
         service.renew(loan)
 
 
@@ -173,7 +194,7 @@ def test_service_reminder_boundary_days(make_loan, days_before_due, expected_sen
     else:
         notifier.send.assert_not_called()
 
-# 5. Додаткове завдання: перевірка тексту через mock ──
+
 def test_reminder_message_contains_title_and_due_date_via_mock_args(make_loan):
     """Перевірка змісту нагадування через інспекцію аргументів виклику mock."""
     loan = make_loan(book_title="1984", reader_email="olena@cyberlibrary.ua")
