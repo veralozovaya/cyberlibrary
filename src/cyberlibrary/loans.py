@@ -2,6 +2,9 @@
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from typing import Protocol
+import logging
+
+logger = logging.getLogger(__name__)
 
 LOAN_DAYS = {"ebook": 14, "paper": 21}   # базовий термін і крок продовження, днів
 MAX_RENEWALS = 2                         # максимальна кількість продовжень
@@ -60,12 +63,13 @@ def renew_loan(loan: Loan, today: date, has_queue: bool) -> Loan:
         raise ValueError("Неможливо продовжити прострочену видачу")
 
     extension = timedelta(days=LOAN_DAYS[loan.book_format])
+    new_due_date = loan.due_date + extension
+    logger.info("Видачу %s продовжено до %s", loan.book_id, new_due_date)  # pragma: no mutate
     return replace(
-        loan,
-        due_date=loan.due_date + extension,
-        renewals_count=loan.renewals_count + 1,
-    )
-
+            loan,
+            due_date=new_due_date,
+            renewals_count=loan.renewals_count + 1,
+        )
 
 class Clock(Protocol):
     def today(self) -> date: ...
